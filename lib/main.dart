@@ -40,8 +40,19 @@ class _HomePageState extends State<HomePage> with GameMixin<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    if (items.isEmpty) {
-      return const SizedBox.shrink();
+    if (items.isEmpty || isError) {
+      return MaterialApp(
+        theme: ThemeData.light(),
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(
+          body: Center(
+            child: Text(
+              'Something wrong!',
+              style: Theme.of(context).textTheme.headline4,
+            ),
+          ),
+        ),
+      );
     }
 
     var mainColor = currentPalette?.mutedColor?.color;

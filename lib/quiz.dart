@@ -23,6 +23,8 @@ mixin GameMixin<T extends StatefulWidget> on State<T> {
 
   final items = <QuizItem>[];
 
+  var isError = false;
+
   PaletteGenerator? currentPalette;
   PaletteGenerator? nextPalette;
 
@@ -36,6 +38,7 @@ mixin GameMixin<T extends StatefulWidget> on State<T> {
   }
 
   Future<void> _onSetupGame() async {
+    isError = false;
     try {
       var countries = await Api.fetchCountries();
       countries = _countryWithImages(countries);
@@ -43,8 +46,7 @@ mixin GameMixin<T extends StatefulWidget> on State<T> {
       countries = countries.sublist(0, _countryLimit);
       _updateItems(countries);
     } catch (e) {
-      // TODO handle error
-      print(e);
+      isError = true;
     }
   }
 
