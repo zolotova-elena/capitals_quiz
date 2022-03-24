@@ -32,6 +32,21 @@ class FinishQuizWidget extends StatelessWidget {
             'out of $topScore',
             style: Theme.of(context).textTheme.headline5,
           ),
+          ElevatedButton(
+              onPressed: () => {
+                Navigator.pushNamed(context, "/game"),
+              },
+              child: const Text(
+                'Try again',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              )
+          ),
+          OutlinedButton(
+            onPressed: () => {
+              Navigator.pushNamed(context, "/home"),
+            },
+            child: const Text('Home'),
+          )
         ],
       ),
     );

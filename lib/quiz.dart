@@ -101,7 +101,6 @@ mixin GameMixin<T extends StatefulWidget> on State<T> {
     for (var i = 0; i < fakes.length; i++) {
       list.add(QuizItem(fakes[i], fake: fakes[(i + 1) % fakes.length]));
     }
-    list.map((i) => print(i));
     list.shuffle(_random);
     items.clear();
     items.addAll(list);
