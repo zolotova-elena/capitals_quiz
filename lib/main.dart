@@ -14,25 +14,30 @@ class App extends StatefulWidget {
 }
 
 class _AppState extends State<App> {
+  var _light = true;
+
+  void onToggle() => setState(() => _light = !_light);
 
   @override
   Widget build(BuildContext context) {
-      return MaterialApp(
-        theme: ThemeData.light(),
-        debugShowCheckedModeBanner: false,
-        home: const HomeScreen(),
-        routes: {
-          "/home": (context) => const HomeScreen(),
-          "/game": (context) => const GameScreen(),
-          "/error": (context) => Scaffold(
-                body: Center(
-                  child: Text(
-                    'Something wrong!',
-                    style: Theme.of(context).textTheme.headline4,
-                  ),
+    return MaterialApp(
+      title: 'Capitals quiz',
+      theme: _light ? ThemeData.light() : ThemeData.dark(),
+      debugShowCheckedModeBanner: false,
+      home: HomeScreen(light: _light, onToggle: onToggle),
+      routes: {
+        "/home": (context) => HomeScreen(light: _light, onToggle: onToggle),
+        "/game": (context) => const GameScreen(),
+        // todo not used
+        "/error": (context) => Scaffold(
+              body: Center(
+                child: Text(
+                  'Something wrong!',
+                  style: Theme.of(context).textTheme.headline4,
                 ),
               ),
-        },
-      );
+            ),
+      },
+    );
   }
 }

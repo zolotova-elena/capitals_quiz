@@ -28,7 +28,6 @@ class _GameScreenState extends State<GameScreen> with GameMixin<GameScreen> {
 
   @override
   Widget build(BuildContext context) {
-
     var mainColor = currentPalette?.mutedColor?.color;
     var secondColor = currentPalette?.vibrantColor?.color;
     final defaultColor =
@@ -36,6 +35,7 @@ class _GameScreenState extends State<GameScreen> with GameMixin<GameScreen> {
     mainColor = mainColor ?? defaultColor;
     secondColor = secondColor ?? defaultColor;
 
+    // todo remove conditions and create new widgets
     return Scaffold(
       body: Background(
         startColor: mainColor.withOpacity(0.3),
@@ -45,34 +45,34 @@ class _GameScreenState extends State<GameScreen> with GameMixin<GameScreen> {
           child: Stack(
             children: [
               if (items.isNotEmpty)
-              Align(
-                alignment: Alignment.bottomCenter,
-                child: Progress(
-                  color: secondColor.withOpacity(0.6),
-                  progress: current / items.length,
-                  duration: const Duration(seconds: 15),
+                Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Progress(
+                    color: secondColor.withOpacity(0.6),
+                    progress: current / items.length,
+                    duration: const Duration(seconds: 15),
+                  ),
                 ),
-              ),
               if (items.isNotEmpty)
-              Align(
-                alignment: Alignment.bottomCenter,
-                child: Progress(
-                  color: mainColor.withOpacity(0.4),
-                  progress: max(0, score) / topScore,
+                Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Progress(
+                    color: mainColor.withOpacity(0.4),
+                    progress: max(0, score) / topScore,
+                  ),
                 ),
-              ),
               isCompleted && items.isNotEmpty
                   ? Positioned.fill(
-                child: FinishQuizWidget(
-                  score: score,
-                  topScore: topScore,
-                  onTap: reset,
-                ),
-              )
+                      child: FinishQuizWidget(
+                        score: score,
+                        topScore: topScore,
+                        onTap: reset,
+                      ),
+                    )
                   : Center(
-                child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation(secondColor)),
-              ),
+                      child: CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation(secondColor)),
+                    ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 6),
                 child: Align(
@@ -105,7 +105,8 @@ class _GameScreenState extends State<GameScreen> with GameMixin<GameScreen> {
                           delaySlideFor: 60,
                           controller: _cardsController,
                           cards: items
-                              .map((e) => CapitalCard(key: ValueKey(e), item: e))
+                              .map(
+                                  (e) => CapitalCard(key: ValueKey(e), item: e))
                               .toList(),
                           onForward: (index, info) => onGuess(
                             index,
@@ -118,8 +119,9 @@ class _GameScreenState extends State<GameScreen> with GameMixin<GameScreen> {
                         padding: const EdgeInsets.all(6.0),
                         child: Controls(
                           onAnswer: (isTrue) => _cardsController.forward(
-                            direction:
-                            isTrue ? SwipDirection.Right : SwipDirection.Left,
+                            direction: isTrue
+                                ? SwipDirection.Right
+                                : SwipDirection.Left,
                           ),
                         ),
                       ),

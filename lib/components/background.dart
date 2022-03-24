@@ -16,14 +16,14 @@ class Background extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => AnimatedContainer(
-    duration: _updateDuration,
-    decoration: BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.bottomLeft,
-        end: Alignment.topRight,
-        colors: [startColor, endColor],
-      ),
-    ),
-    child: child,
-  );
+        duration: _updateDuration,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.bottomLeft,
+            end: Alignment.topRight,
+            colors: [startColor, endColor],
+          ),
+        ),
+        child: child,
+      );
 }

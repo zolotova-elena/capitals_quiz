@@ -11,13 +11,13 @@ class CapitalCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Image(
-    frameBuilder: (
-        BuildContext context,
-        Widget child,
-        int? frame,
-        bool wasSynchronouslyLoaded,
+        frameBuilder: (
+          BuildContext context,
+          Widget child,
+          int? frame,
+          bool wasSynchronouslyLoaded,
         ) =>
-        Stack(
+            Stack(
           children: [
             Positioned.fill(
               child: AnimatedOpacity(
@@ -36,7 +36,7 @@ class CapitalCard extends StatelessWidget {
             ),
           ],
         ),
-    image: item.image,
-    fit: BoxFit.cover,
-  );
+        image: item.image,
+        fit: BoxFit.cover,
+      );
 }

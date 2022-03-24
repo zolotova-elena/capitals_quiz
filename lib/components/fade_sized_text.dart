@@ -6,11 +6,11 @@ class FadeSizedText extends StatelessWidget {
   final TextStyle? style;
 
   const FadeSizedText(
-      this.text, {
-        Key? key,
-        this.duration = const Duration(milliseconds: 200),
-        this.style,
-      }) : super(key: key);
+    this.text, {
+    Key? key,
+    this.duration = const Duration(milliseconds: 200),
+    this.style,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

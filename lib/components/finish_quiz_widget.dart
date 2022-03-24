@@ -34,13 +34,12 @@ class FinishQuizWidget extends StatelessWidget {
           ),
           ElevatedButton(
               onPressed: () => {
-                Navigator.pushNamed(context, "/game"),
-              },
+                    Navigator.pushNamed(context, "/game"),
+                  },
               child: const Text(
                 'Try again',
                 style: TextStyle(fontWeight: FontWeight.bold),
-              )
-          ),
+              )),
           OutlinedButton(
             onPressed: () => {
               Navigator.pushNamed(context, "/home"),

@@ -7,12 +7,11 @@ class Country {
   final int index;
 
   const Country(
-      this.name,
-      this.capital, {
-        this.imageUrls = const [''],
-        this.index = 0,
-      }
-  );
+    this.name,
+    this.capital, {
+    this.imageUrls = const [''],
+    this.index = 0,
+  });
 
   ImageProvider get image => NetworkImage('${imageUrls[index]}?w=600');
 }
