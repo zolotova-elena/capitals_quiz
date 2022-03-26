@@ -1,4 +1,4 @@
-import 'package:capitals_quiz/components/wave.dart';
+import 'package:capitals_quiz/ui/components/wave.dart';
 import 'package:flutter/material.dart';
 
 class Progress extends StatelessWidget {

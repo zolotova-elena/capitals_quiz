@@ -1,14 +1,21 @@
 import 'dart:math';
 
-import 'package:capitals_quiz/components/background.dart';
-import 'package:capitals_quiz/components/capital_card.dart';
-import 'package:capitals_quiz/components/controls.dart';
-import 'package:capitals_quiz/components/finish_quiz_widget.dart';
-import 'package:capitals_quiz/components/header.dart';
-import 'package:capitals_quiz/components/progress.dart';
-import 'package:capitals_quiz/quiz.dart';
+import 'package:capitals_quiz/domain/background_logic.dart';
+import 'package:capitals_quiz/domain/items_logic.dart';
+import 'package:capitals_quiz/domain/quiz_logic.dart';
+import 'package:capitals_quiz/models/color_pair.dart';
+import 'package:capitals_quiz/models/quiz_item.dart';
+import 'package:capitals_quiz/ui/components/background.dart';
+import 'package:capitals_quiz/ui/components/capital_card.dart';
+import 'package:capitals_quiz/ui/components/controls.dart';
+import 'package:capitals_quiz/ui/components/finish_quiz_widget.dart';
+import 'package:capitals_quiz/ui/components/header.dart';
+import 'package:capitals_quiz/ui/components/progress.dart';
 import 'package:flutter/material.dart';
 import 'package:tcard/tcard.dart';
+
+import '../../data/api.dart';
+import '../../data/assets.dart';
 
 class GameScreen extends StatefulWidget {
   const GameScreen({Key? key}) : super(key: key);
@@ -17,29 +24,65 @@ class GameScreen extends StatefulWidget {
   _GameScreenState createState() => _GameScreenState();
 }
 
-class _GameScreenState extends State<GameScreen> with GameMixin<GameScreen> {
+class _GameScreenState extends State<GameScreen> {
   final TCardController _cardsController = TCardController();
+  final BackgroundLogic palette = BackgroundLogic();
+  final Random random = Random();
+  final assets = Assets();
+  late final ItemsLogic itemsLogic = ItemsLogic(random);
+  late final QuizLogic quiz = QuizLogic(
+    Random(),
+    const Api(),
+    assets,
+    palette,
+    itemsLogic,
+  );
 
   @override
   void initState() {
     super.initState();
+    quiz.addListener(_update);
     onInit();
   }
 
+  Future<void> onInit() async {
+    await assets.load();
+    await quiz.onStartGame();
+  }
+
+  @override
+  void dispose() {
+    quiz.removeListener(_update);
+    super.dispose();
+  }
+
+  List<QuizItem> get items => itemsLogic.items;
+
+  int get currentIndex => itemsLogic.currentIndex;
+
+  bool get isCompleted => itemsLogic.isCompleted;
+
+  ColorPair get colors => palette.colors;
+
+  int get score => quiz.score;
+
+  int get topScore => quiz.topScore;
+
   @override
   Widget build(BuildContext context) {
-    var mainColor = currentPalette?.mutedColor?.color;
-    var secondColor = currentPalette?.vibrantColor?.color;
-    final defaultColor =
-        mainColor ?? secondColor ?? Theme.of(context).backgroundColor;
-    mainColor = mainColor ?? defaultColor;
-    secondColor = secondColor ?? defaultColor;
-
     // todo remove conditions and create new widgets
     return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => {
+            Navigator.pushNamed(context, "/home"),
+          },
+        ),
+      ),
       body: Background(
-        startColor: mainColor.withOpacity(0.3),
-        endColor: secondColor.withOpacity(0.3),
+        startColor: colors.main.withOpacity(0.3),
+        endColor: colors.second.withOpacity(0.3),
         child: SafeArea(
           bottom: false,
           child: Stack(
@@ -48,8 +91,8 @@ class _GameScreenState extends State<GameScreen> with GameMixin<GameScreen> {
                 Align(
                   alignment: Alignment.bottomCenter,
                   child: Progress(
-                    color: secondColor.withOpacity(0.6),
-                    progress: current / items.length,
+                    color: colors.second.withOpacity(0.6),
+                    progress: itemsLogic.progress,
                     duration: const Duration(seconds: 15),
                   ),
                 ),
@@ -57,7 +100,7 @@ class _GameScreenState extends State<GameScreen> with GameMixin<GameScreen> {
                 Align(
                   alignment: Alignment.bottomCenter,
                   child: Progress(
-                    color: mainColor.withOpacity(0.4),
+                    color: colors.main.withOpacity(0.4),
                     progress: max(0, score) / topScore,
                   ),
                 ),
@@ -66,25 +109,13 @@ class _GameScreenState extends State<GameScreen> with GameMixin<GameScreen> {
                       child: FinishQuizWidget(
                         score: score,
                         topScore: topScore,
-                        onTap: reset,
+                        onTap: () => quiz.onReset(),
                       ),
                     )
                   : Center(
                       child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation(secondColor)),
+                          valueColor: AlwaysStoppedAnimation(colors.second)),
                     ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                child: Align(
-                  alignment: Alignment.topLeft,
-                  child: IconButton(
-                    icon: const Icon(Icons.arrow_back),
-                    onPressed: () => {
-                      Navigator.pushNamed(context, "/home"),
-                    },
-                  ),
-                ),
-              ),
               if (!isCompleted && items.isNotEmpty)
                 Column(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -94,8 +125,8 @@ class _GameScreenState extends State<GameScreen> with GameMixin<GameScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 6)
                             .copyWith(top: 6.0),
                         child: Headers(
-                          title: 'Is it ${items[current].capital}?',
-                          subtitle: items[current].country,
+                          title: 'Is it ${items[currentIndex].capital}?',
+                          subtitle: items[currentIndex].country,
                         ),
                       ),
                       Padding(
@@ -108,11 +139,8 @@ class _GameScreenState extends State<GameScreen> with GameMixin<GameScreen> {
                               .map(
                                   (e) => CapitalCard(key: ValueKey(e), item: e))
                               .toList(),
-                          onForward: (index, info) => onGuess(
-                            index,
-                            info.direction == SwipDirection.Right,
-                            items[current].fake != null,
-                          ),
+                          onForward: (index, info) => quiz.onGuess(
+                              index, info.direction == SwipDirection.Right),
                         ),
                       ),
                       Padding(
@@ -132,4 +160,6 @@ class _GameScreenState extends State<GameScreen> with GameMixin<GameScreen> {
       ),
     );
   }
+
+  void _update() => setState(() {});
 }
