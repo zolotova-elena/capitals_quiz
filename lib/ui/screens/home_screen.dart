@@ -23,8 +23,8 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-          title: const Text('Capitals quiz'),
-          actions: <Widget>[
+        title: const Text('Capitals quiz'),
+        actions: <Widget>[
           IconButton(
             icon: Icon(_settingsShow ? Icons.close : Icons.settings),
             tooltip: 'Show settings',
@@ -47,9 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Center(
                     child: ElevatedButton(
-                        onPressed: () => {
-                              Navigator.pushNamed(context, "/game"),
-                            },
+                        onPressed: () => Navigator.pushNamed(context, "/game"),
                         style: ElevatedButton.styleFrom(
                           fixedSize: const Size(300, 300),
                           shape: RoundedRectangleBorder(

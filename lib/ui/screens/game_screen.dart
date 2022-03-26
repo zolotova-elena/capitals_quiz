@@ -4,7 +4,6 @@ import 'package:capitals_quiz/domain/background_logic.dart';
 import 'package:capitals_quiz/domain/items_logic.dart';
 import 'package:capitals_quiz/domain/quiz_logic.dart';
 import 'package:capitals_quiz/models/color_pair.dart';
-import 'package:capitals_quiz/models/quiz_item.dart';
 import 'package:capitals_quiz/ui/components/background.dart';
 import 'package:capitals_quiz/ui/components/capital_card.dart';
 import 'package:capitals_quiz/ui/components/controls.dart';
@@ -41,7 +40,6 @@ class _GameScreenState extends State<GameScreen> {
   @override
   void initState() {
     super.initState();
-    quiz.addListener(_update);
     onInit();
   }
 
@@ -52,21 +50,11 @@ class _GameScreenState extends State<GameScreen> {
 
   @override
   void dispose() {
-    quiz.removeListener(_update);
+    palette.dispose();
+    itemsLogic.dispose();
+    quiz.dispose();
     super.dispose();
   }
-
-  List<QuizItem> get items => itemsLogic.items;
-
-  int get currentIndex => itemsLogic.currentIndex;
-
-  bool get isCompleted => itemsLogic.isCompleted;
-
-  ColorPair get colors => palette.colors;
-
-  int get score => quiz.score;
-
-  int get topScore => quiz.topScore;
 
   @override
   Widget build(BuildContext context) {
@@ -80,86 +68,153 @@ class _GameScreenState extends State<GameScreen> {
           },
         ),
       ),
-      body: Background(
-        startColor: colors.main.withOpacity(0.3),
-        endColor: colors.second.withOpacity(0.3),
-        child: SafeArea(
-          bottom: false,
-          child: Stack(
-            children: [
-              if (items.isNotEmpty)
-                Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Progress(
-                    color: colors.second.withOpacity(0.6),
-                    progress: itemsLogic.progress,
-                    duration: const Duration(seconds: 15),
-                  ),
-                ),
-              if (items.isNotEmpty)
-                Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Progress(
-                    color: colors.main.withOpacity(0.4),
-                    progress: max(0, score) / topScore,
-                  ),
-                ),
-              isCompleted && items.isNotEmpty
-                  ? Positioned.fill(
-                      child: FinishQuizWidget(
-                        score: score,
-                        topScore: topScore,
-                        onTap: () => quiz.onReset(),
-                      ),
-                    )
-                  : Center(
-                      child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation(colors.second)),
-                    ),
-              if (!isCompleted && items.isNotEmpty)
-                Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    mainAxisSize: MainAxisSize.max,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 6)
-                            .copyWith(top: 6.0),
-                        child: Headers(
-                          title: 'Is it ${items[currentIndex].capital}?',
-                          subtitle: items[currentIndex].country,
+      body: StreamBuilder<ColorPair>(
+          initialData: palette.colors,
+          stream: palette.stream,
+          builder: (context, snapshot) {
+            final colors = snapshot.requireData;
+            return Background(
+              startColor: colors.main.withOpacity(0.3),
+              endColor: colors.second.withOpacity(0.3),
+              child: SafeArea(
+                bottom: false,
+                child: StreamBuilder<bool>(
+                  initialData: itemsLogic.state.isCompleted,
+                  stream: itemsLogic.stream
+                      .map((state) => state.isCompleted)
+                      .distinct(),
+                  builder: (context, snapshot) {
+                    final isCompleted = snapshot.requireData;
+                    return Stack(
+                      children: [
+                        Align(
+                          alignment: Alignment.bottomCenter,
+                          child: StreamBuilder<ItemsState>(
+                              initialData: itemsLogic.state,
+                              stream: itemsLogic.stream,
+                              builder: (context, snapshot) {
+                                final progress = snapshot.requireData.progress;
+                                return Progress(
+                                  color: colors.second.withOpacity(0.6),
+                                  progress: progress,
+                                  duration: const Duration(seconds: 15),
+                                );
+                              }),
                         ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(25.0),
-                        child: TCard(
-                          slideSpeed: 25,
-                          delaySlideFor: 60,
-                          controller: _cardsController,
-                          cards: items
-                              .map(
-                                  (e) => CapitalCard(key: ValueKey(e), item: e))
-                              .toList(),
-                          onForward: (index, info) => quiz.onGuess(
-                              index, info.direction == SwipDirection.Right),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(6.0),
-                        child: Controls(
-                          onAnswer: (isTrue) => _cardsController.forward(
-                            direction: isTrue
-                                ? SwipDirection.Right
-                                : SwipDirection.Left,
+                        Align(
+                          alignment: Alignment.bottomCenter,
+                          child: StreamBuilder<QuizState>(
+                            initialData: quiz.state,
+                            stream: quiz.stream,
+                            builder: (context, snapshot) {
+                              final progress = snapshot.requireData.progress;
+                              return Align(
+                                alignment: Alignment.bottomCenter,
+                                child: Progress(
+                                  color: colors.main.withOpacity(0.4),
+                                  progress: progress,
+                                ),
+                              );
+                            },
                           ),
                         ),
-                      ),
-                    ])
-            ],
-          ),
-        ),
-      ),
+                        StreamBuilder<ItemsState>(
+                            initialData: itemsLogic.state,
+                            stream: itemsLogic.stream,
+                            builder: (context, snapshot) {
+                              final isCompleted =
+                                  snapshot.requireData.isCompleted;
+                              return isCompleted
+                                  ? Positioned.fill(
+                                      child: FinishQuizWidget(
+                                        score: quiz.state.score,
+                                        topScore: quiz.state.topScore,
+                                        onTap: () => quiz.onReset(),
+                                      ),
+                                    )
+                                  : Center(
+                                      child: CircularProgressIndicator(
+                                          valueColor: AlwaysStoppedAnimation(
+                                              colors.second)),
+                                    );
+                            }),
+                        if (!isCompleted)
+                          LayoutBuilder(
+                            builder: (
+                              BuildContext context,
+                              BoxConstraints constraints,
+                            ) =>
+                                Column(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceEvenly,
+                                    mainAxisSize: MainAxisSize.max,
+                                    children: [
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                            horizontal: 6)
+                                        .copyWith(top: 6.0),
+                                    child: StreamBuilder<ItemsState>(
+                                        initialData: itemsLogic.state,
+                                        stream: itemsLogic.stream,
+                                        builder: (context, snapshot) {
+                                          final state = snapshot.requireData;
+                                          if (state.isEmpty) {
+                                            return const SizedBox.shrink();
+                                          }
+                                          return Headers(
+                                            title:
+                                                'Is it ${state.current.capital}?',
+                                            subtitle: state.current.country,
+                                          );
+                                        }),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.all(25.0),
+                                    child: StreamBuilder<ItemsState>(
+                                        initialData: itemsLogic.state,
+                                        stream: itemsLogic.stream,
+                                        builder: (context, snapshot) {
+                                          final state = snapshot.requireData;
+                                          if (state.isEmpty) {
+                                            return const SizedBox.shrink();
+                                          }
+
+                                          return TCard(
+                                            slideSpeed: 25,
+                                            delaySlideFor: 60,
+                                            controller: _cardsController,
+                                            cards: state.items
+                                                .map((e) => CapitalCard(
+                                                    key: ValueKey(e), item: e))
+                                                .toList(),
+                                            onForward: (index, info) =>
+                                                quiz.onGuess(
+                                                    index,
+                                                    info.direction ==
+                                                        SwipDirection.Right),
+                                          );
+                                        }),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.all(6.0),
+                                    child: Controls(
+                                      onAnswer: (isTrue) =>
+                                          _cardsController.forward(
+                                        direction: isTrue
+                                            ? SwipDirection.Right
+                                            : SwipDirection.Left,
+                                      ),
+                                    ),
+                                  ),
+                                ]),
+                          )
+                      ],
+                    );
+                  },
+                ),
+              ),
+            );
+          }),
     );
   }
-
-  void _update() => setState(() {});
 }

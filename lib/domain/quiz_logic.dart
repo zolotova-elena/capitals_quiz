@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:capitals_quiz/models/country.dart';
@@ -9,14 +10,28 @@ import '../data/assets.dart';
 import 'background_logic.dart';
 import 'items_logic.dart';
 
-class QuizLogic extends ChangeNotifier {
-  static const _successGuess = 1;
-  static const _successFake = 0;
-  static const _fail = -1; // todo not used
-  static const _countryLimit = 10;
+class QuizState {
+  final int score;
+  final int topScore;
 
-  var topScore = 0;
-  var score = 0;
+  const QuizState(this.score, this.topScore);
+
+  double get progress => max(0, score) / topScore;
+
+  QuizState copyWith({
+    int? score,
+    int? topScore,
+  }) =>
+      QuizState(
+        score ?? this.score,
+        topScore ?? this.topScore,
+      );
+}
+
+class QuizLogic extends ChangeNotifier {
+  static const _success = 1;
+  static const _fail = 0;
+  static const _countryLimit = 10;
 
   var isError = false;
 
@@ -26,7 +41,17 @@ class QuizLogic extends ChangeNotifier {
   final BackgroundLogic _palette;
   final ItemsLogic _itemsLogic;
 
-  QuizLogic(this._random, this._api, this._assets, this._palette, this._itemsLogic);
+  final _controller = StreamController<QuizState>.broadcast();
+  var _state = const QuizState(0, 1);
+
+  QuizLogic(
+      this._random, this._api, this._assets, this._palette, this._itemsLogic);
+
+  QuizState get state => _state;
+
+  Stream<QuizState> get stream => _controller.stream;
+
+  Future<void> dispose() => _controller.close();
 
   Future<void> onStartGame() async {
     isError = false;
@@ -44,41 +69,44 @@ class QuizLogic extends ChangeNotifier {
 
   Future<void> onReset() async {
     _updateScore(0);
-    _updateTopScore(0);
+    _updateTopScore(1);
     _itemsLogic.reset();
   }
 
   Future<void> onGuess(int index, bool isTrue) async {
-    final isActuallyTrue = _itemsLogic.isCurrentTrue;
+    final isActuallyTrue = _itemsLogic.state.isCurrentTrue;
     var scoreUpdate = 0;
-    if (isTrue && isActuallyTrue) {
-      scoreUpdate = _successGuess;
-    }
-    if (!isTrue && !isActuallyTrue) {
-      scoreUpdate = _successFake;
-    }
-    if (isTrue && !isActuallyTrue || !isTrue && isActuallyTrue) {
+    if ((isTrue && isActuallyTrue) || (!isTrue && !isActuallyTrue)) {
+      scoreUpdate = _success;
+    } else {
       scoreUpdate = 0;
     }
-    _updateScore(score + scoreUpdate);
+    if (!isTrue && !isActuallyTrue) {
+      scoreUpdate = _fail;
+    }
+
+    _updateScore(state.score + scoreUpdate);
     _itemsLogic.updateCurrent(index);
-    await _updatePalette();
+    if (!_itemsLogic.state.isCompleted) {
+      await _updatePalette();
+    }
   }
 
   Future<void> _updatePalette() => _palette.updatePalette(
-      _itemsLogic.current.image,
-      _itemsLogic.next?.image,
-  );
+        _itemsLogic.state.current.image,
+        _itemsLogic.state.next?.image,
+      );
 
-  void _updateScore(int score) => _setState(() => this.score = score);
+  void _updateScore(int score) => _setState(state.copyWith(score: score));
 
-  void _updateTopScore(int topScore) => _setState(() => this.topScore = topScore);
+  void _updateTopScore(int topScore) =>
+      _setState(state.copyWith(topScore: topScore));
 
   void _prepareItems(List<Country> countries) {
     _itemsLogic.updateItems(countries);
-    final originals = _itemsLogic.originalsLength;
-    final fakes = _itemsLogic.fakeLength;
-    _updateTopScore(topScore + originals + fakes);
+    final originals = _itemsLogic.state.originalsLength;
+    final fakes = _itemsLogic.state.fakeLength;
+    _updateTopScore(originals + fakes);
   }
 
   List<Country> _countryWithImages(List<Country> countries) => countries
@@ -96,8 +124,8 @@ class QuizLogic extends ChangeNotifier {
       .where((element) => element.index != -1)
       .toList();
 
-  void _setState(VoidCallback callback) {
-    callback();
-    notifyListeners();
+  void _setState(QuizState state) {
+    _state = state;
+    _controller.add(_state);
   }
 }
