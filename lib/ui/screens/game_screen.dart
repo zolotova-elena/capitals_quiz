@@ -1,20 +1,14 @@
-import 'dart:math';
-
-import 'package:capitals_quiz/domain/background_logic.dart';
-import 'package:capitals_quiz/domain/items_logic.dart';
-import 'package:capitals_quiz/domain/quiz_logic.dart';
+import 'package:capitals_quiz/domain/assemble.dart';
 import 'package:capitals_quiz/models/color_pair.dart';
 import 'package:capitals_quiz/ui/components/background.dart';
-import 'package:capitals_quiz/ui/components/capital_card.dart';
+import 'package:capitals_quiz/ui/components/card_headers.dart';
+import 'package:capitals_quiz/ui/components/cards.dart';
 import 'package:capitals_quiz/ui/components/controls.dart';
-import 'package:capitals_quiz/ui/components/finish_quiz_widget.dart';
-import 'package:capitals_quiz/ui/components/header.dart';
-import 'package:capitals_quiz/ui/components/progress.dart';
+import 'package:capitals_quiz/ui/components/items_progress.dart';
+import 'package:capitals_quiz/ui/components/result_or_loading.dart';
+import 'package:capitals_quiz/ui/components/score_progress.dart';
 import 'package:flutter/material.dart';
 import 'package:tcard/tcard.dart';
-
-import '../../data/api.dart';
-import '../../data/assets.dart';
 
 class GameScreen extends StatefulWidget {
   const GameScreen({Key? key}) : super(key: key);
@@ -24,18 +18,11 @@ class GameScreen extends StatefulWidget {
 }
 
 class _GameScreenState extends State<GameScreen> {
-  final TCardController _cardsController = TCardController();
-  final BackgroundLogic palette = BackgroundLogic();
-  final Random random = Random();
-  final assets = Assets();
-  late final ItemsLogic itemsLogic = ItemsLogic(random);
-  late final QuizLogic quiz = QuizLogic(
-    Random(),
-    const Api(),
-    assets,
-    palette,
-    itemsLogic,
-  );
+  TCardController _cardsController = TCardController();
+
+  final backgroundLogic = Assemble.backgroundLogic;
+  final itemsLogic = Assemble.itemsLogic;
+  final quizLogic = Assemble.quizLogic;
 
   @override
   void initState() {
@@ -44,15 +31,15 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   Future<void> onInit() async {
-    await assets.load();
-    await quiz.onStartGame();
+    await Assemble.assets.load();
+    await quizLogic.onStartGame();
   }
 
   @override
   void dispose() {
-    palette.dispose();
+    backgroundLogic.dispose();
     itemsLogic.dispose();
-    quiz.dispose();
+    quizLogic.dispose();
     super.dispose();
   }
 
@@ -69,8 +56,8 @@ class _GameScreenState extends State<GameScreen> {
         ),
       ),
       body: StreamBuilder<ColorPair>(
-          initialData: palette.colors,
-          stream: palette.stream,
+          initialData: backgroundLogic.colors,
+          stream: backgroundLogic.stream,
           builder: (context, snapshot) {
             final colors = snapshot.requireData;
             return Background(
@@ -87,57 +74,15 @@ class _GameScreenState extends State<GameScreen> {
                     final isCompleted = snapshot.requireData;
                     return Stack(
                       children: [
-                        Align(
+                        const Align(
                           alignment: Alignment.bottomCenter,
-                          child: StreamBuilder<ItemsState>(
-                              initialData: itemsLogic.state,
-                              stream: itemsLogic.stream,
-                              builder: (context, snapshot) {
-                                final progress = snapshot.requireData.progress;
-                                return Progress(
-                                  color: colors.second.withOpacity(0.6),
-                                  progress: progress,
-                                  duration: const Duration(seconds: 15),
-                                );
-                              }),
+                          child: ItemsProgress(),
                         ),
-                        Align(
+                        const Align(
                           alignment: Alignment.bottomCenter,
-                          child: StreamBuilder<QuizState>(
-                            initialData: quiz.state,
-                            stream: quiz.stream,
-                            builder: (context, snapshot) {
-                              final progress = snapshot.requireData.progress;
-                              return Align(
-                                alignment: Alignment.bottomCenter,
-                                child: Progress(
-                                  color: colors.main.withOpacity(0.4),
-                                  progress: progress,
-                                ),
-                              );
-                            },
-                          ),
+                          child: ScoreProgress(),
                         ),
-                        StreamBuilder<ItemsState>(
-                            initialData: itemsLogic.state,
-                            stream: itemsLogic.stream,
-                            builder: (context, snapshot) {
-                              final isCompleted =
-                                  snapshot.requireData.isCompleted;
-                              return isCompleted
-                                  ? Positioned.fill(
-                                      child: FinishQuizWidget(
-                                        score: quiz.state.score,
-                                        topScore: quiz.state.topScore,
-                                        onTap: () => quiz.onReset(),
-                                      ),
-                                    )
-                                  : Center(
-                                      child: CircularProgressIndicator(
-                                          valueColor: AlwaysStoppedAnimation(
-                                              colors.second)),
-                                    );
-                            }),
+                        const ResultOrLoading(),
                         if (!isCompleted)
                           LayoutBuilder(
                             builder: (
@@ -153,47 +98,14 @@ class _GameScreenState extends State<GameScreen> {
                                     padding: const EdgeInsets.symmetric(
                                             horizontal: 6)
                                         .copyWith(top: 6.0),
-                                    child: StreamBuilder<ItemsState>(
-                                        initialData: itemsLogic.state,
-                                        stream: itemsLogic.stream,
-                                        builder: (context, snapshot) {
-                                          final state = snapshot.requireData;
-                                          if (state.isEmpty) {
-                                            return const SizedBox.shrink();
-                                          }
-                                          return Headers(
-                                            title:
-                                                'Is it ${state.current.capital}?',
-                                            subtitle: state.current.country,
-                                          );
-                                        }),
+                                    child: const CardHeaders()
                                   ),
                                   Padding(
                                     padding: const EdgeInsets.all(25.0),
-                                    child: StreamBuilder<ItemsState>(
-                                        initialData: itemsLogic.state,
-                                        stream: itemsLogic.stream,
-                                        builder: (context, snapshot) {
-                                          final state = snapshot.requireData;
-                                          if (state.isEmpty) {
-                                            return const SizedBox.shrink();
-                                          }
-
-                                          return TCard(
-                                            slideSpeed: 25,
-                                            delaySlideFor: 60,
-                                            controller: _cardsController,
-                                            cards: state.items
-                                                .map((e) => CapitalCard(
-                                                    key: ValueKey(e), item: e))
-                                                .toList(),
-                                            onForward: (index, info) =>
-                                                quiz.onGuess(
-                                                    index,
-                                                    info.direction ==
-                                                        SwipDirection.Right),
-                                          );
-                                        }),
+                                    child: Cards(
+                                      cardsController: _cardsController,
+                                      constraints: constraints,
+                                    ),
                                   ),
                                   Padding(
                                     padding: const EdgeInsets.all(6.0),

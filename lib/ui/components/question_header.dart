@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-class Headers extends StatelessWidget {
+class QuestionHeader extends StatelessWidget {
   final String? title;
   final String? subtitle;
 
-  const Headers({
+  const QuestionHeader({
     Key? key,
     this.title,
     this.subtitle,

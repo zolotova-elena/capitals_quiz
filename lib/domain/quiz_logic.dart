@@ -2,8 +2,6 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:capitals_quiz/models/country.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 
 import '../data/api.dart';
 import '../data/assets.dart';
@@ -28,7 +26,7 @@ class QuizState {
       );
 }
 
-class QuizLogic extends ChangeNotifier {
+class QuizLogic {
   static const _success = 1;
   static const _fail = 0;
   static const _countryLimit = 10;
